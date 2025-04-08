@@ -13,6 +13,7 @@ import appointmentRoutes from "./routes/appointmentRoutes.js";
 import cors from "cors";
 import { initFirebase } from "./loaders/firebase.js";
 import { apiErrorHandler } from "./middlewares/errorHandlerMiddleware.js";
+import { requestLogger } from "./middlewares/requestLogger.js";
 
 initFirebase();
 dotenv.config();
@@ -37,7 +38,10 @@ app.use(bodyParser.json());
 // API routes
 app.use("/api", appointmentRoutes);
 
-//Error Middleware Handler]
+//Logger Middleware
+app.use(requestLogger);
+
+//Error Middleware Handler
 app.use(apiErrorHandler);
 
 app.listen(PORT, () => {

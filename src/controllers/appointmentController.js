@@ -8,12 +8,14 @@ import {
 import appConfig from "../config/appConfig.js";
 import moment from "moment-timezone";
 import { ApiError } from "../utils/apiError.js";
+import logger from "../utils/logger.js";
 
 /**
  * Get free slots for a given date and timezone
  */
 export const getFreeSlotsController = async (req, res, next) => {
   try {
+    logger.info("Getting free slots for", req.query);
     let { date, timezone } = req.query;
     timezone = timezone || appConfig.DEFAULT_TIMEZONE;
 
@@ -44,6 +46,7 @@ export const getFreeSlotsController = async (req, res, next) => {
  */
 export const createEventController = async (req, res, next) => {
   try {
+    logger.info("Creating New Event", req.body);
     const { dateTime, duration } = req.body;
 
     if (!dateTime || !duration) {
@@ -108,6 +111,7 @@ export const createEventController = async (req, res, next) => {
  */
 export const getEventsController = async (req, res) => {
   try {
+    logger.info("Get Appointments between", req.query);
     const { startDate, endDate } = req.query;
 
     if (!startDate || !endDate) {
