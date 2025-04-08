@@ -7,63 +7,58 @@ import {
 } from "../services/appointmentService.js";
 import appConfig from "../config/appConfig.js";
 import moment from "moment-timezone";
+import { ApiError } from "../utils/apiError.js";
 
 /**
  * Get free slots for a given date and timezone
  */
-export const getFreeSlotsController = async (req, res) => {
+export const getFreeSlotsController = async (req, res, next) => {
   try {
     let { date, timezone } = req.query;
     timezone = timezone || appConfig.DEFAULT_TIMEZONE;
 
     if (!date) {
-      return res.status(400).json({ error: "Date is required" });
+      throw new ApiError(400, "Date is required");
     }
 
     // Validate date format
     if (!moment(date, "YYYY-MM-DD", true).isValid()) {
-      return res
-        .status(400)
-        .json({ error: "Invalid date format. Please use YYYY-MM-DD" });
+      throw new ApiError(400, "Invalid date format. Please use YYYY-MM-DD");
     }
 
     // Validate timezone
     if (!moment.tz.zone(timezone)) {
-      return res.status(400).json({ error: "Invalid timezone" });
+      throw new ApiError(400, "Invalid timezone");
     }
 
     const freeSlots = await getFreeSlots(date, timezone);
     res.status(200).json(freeSlots);
   } catch (error) {
     console.error("Error getting free slots:", error);
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
 /**
  * Create a new event
  */
-export const createEventController = async (req, res) => {
+export const createEventController = async (req, res, next) => {
   try {
     const { dateTime, duration } = req.body;
 
     if (!dateTime || !duration) {
-      return res
-        .status(400)
-        .json({ error: "DateTime and duration are required" });
+      throw new ApiError(400, "DateTime and duration are required");
     }
 
     // Parse and validate dateTime
     const parsedDateTime = new Date(dateTime);
     if (isNaN(parsedDateTime.getTime())) {
-      return res.status(400).json({ error: "Invalid dateTime format" });
+      throw new ApiError(400, "Invalid dateTime format");
     }
 
     // Validate duration
     if (isNaN(duration) || duration <= 0) {
-      return res
-        .status(400)
-        .json({ error: "Duration must be a positive number" });
+      throw new ApiError(400, "Duration must be a positive number");
     }
 
     const startMoment = moment.tz(dateTime, appConfig.DEFAULT_TIMEZONE);
@@ -86,17 +81,7 @@ export const createEventController = async (req, res) => {
       startMoment.isBefore(workingDayStart) ||
       endMoment.isAfter(workingDayEnd)
     ) {
-      return res
-        .status(400)
-        .json({ error: "Event must be within working hours" });
-    }
-
-    // Check for overlapping events
-    const isBooked = await getConflictingEvents(parsedDateTime, duration);
-    if (isBooked) {
-      return res
-        .status(422)
-        .json({ error: "This time slot is already booked" });
+      throw new ApiError(400, "Event must be within working hours");
     }
 
     // Store event in UTC
@@ -105,10 +90,16 @@ export const createEventController = async (req, res) => {
       .utc()
       .toDate();
 
+    // Check for overlapping events
+    const isBooked = await getConflictingEvents(utcDateTime, duration);
+    if (isBooked) {
+      throw new ApiError(422, "This time slot is already booked");
+    }
+
     const createdEvent = await createEvent(utcDateTime, duration);
     res.status(200).json({ success: true, event: createdEvent });
   } catch (error) {
-    res.status(422).json({ error: error.message });
+    next(error);
   }
 };
 
@@ -120,9 +111,7 @@ export const getEventsController = async (req, res) => {
     const { startDate, endDate } = req.query;
 
     if (!startDate || !endDate) {
-      return res
-        .status(400)
-        .json({ error: "StartDate and EndDate are required" });
+      throw new ApiError(400, "StartDate and EndDate are required");
     }
 
     // Parse dates in the application's default timezone
@@ -130,14 +119,12 @@ export const getEventsController = async (req, res) => {
     const parsedEndDate = moment.tz(endDate, appConfig.DEFAULT_TIMEZONE);
 
     if (!parsedStartDate.isValid() || !parsedEndDate.isValid()) {
-      return res.status(400).json({ error: "Invalid date format" });
+      throw new ApiError(400, "Invalid date format");
     }
 
     // Ensure startDate is before endDate
     if (parsedStartDate > parsedEndDate) {
-      return res
-        .status(400)
-        .json({ error: "StartDate must be before EndDate" });
+      throw new ApiError(400, "StartDate must be before EndDate");
     }
 
     // Create full day range in UTC to match how events are stored
@@ -157,7 +144,7 @@ export const getEventsController = async (req, res) => {
 
     res.status(200).json(formattedEvents);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
@@ -170,6 +157,6 @@ export const fetchTimezones = async (req, res) => {
     res.status(200).json(timezones);
   } catch (error) {
     console.error("Error fetching timezones:", error.message);
-    res.status(500).json({ error: "Failed to fetch timezones" });
+    next(error);
   }
 };

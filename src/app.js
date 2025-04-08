@@ -12,6 +12,8 @@ import dotenv from "dotenv";
 import appointmentRoutes from "./routes/appointmentRoutes.js";
 import cors from "cors";
 import { initFirebase } from "./loaders/firebase.js";
+import { apiErrorHandler } from "./middlewares/errorHandlerMiddleware.js";
+
 initFirebase();
 dotenv.config();
 
@@ -34,6 +36,9 @@ app.use(bodyParser.json());
 
 // API routes
 app.use("/api", appointmentRoutes);
+
+//Error Middleware Handler]
+app.use(apiErrorHandler);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

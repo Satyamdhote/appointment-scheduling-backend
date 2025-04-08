@@ -5,7 +5,7 @@
  */
 
 const appConfig = {
-  START_HOUR: 10, // Start of working day (10 AM)
+  START_HOUR: 8, // Start of working day (8 AM)
   END_HOUR: 17, // End of working day (5 PM)
   SLOT_DURATION: 30, // Duration of each appointment slot in minutes
   DEFAULT_TIMEZONE: "US/Eastern", // Default timezone for scheduling

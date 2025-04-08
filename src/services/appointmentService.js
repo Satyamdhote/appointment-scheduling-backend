@@ -82,35 +82,36 @@ export const getFreeSlots = async (
  */
 export const getConflictingEvents = async (dateTime, duration) => {
   const db = getDB();
-  const endDateTime = new Date(dateTime);
-  endDateTime.setMinutes(endDateTime.getMinutes() + duration);
 
-  // Check if there is any event that overlaps with the given time range
-  const snapshot = await db
-    .collection(config.COLLECTION_NAME)
-    .where("start", "<", endDateTime.toISOString())
-    .get();
+  const startDateTime = new Date(dateTime);
+  const endDateTime = new Date(startDateTime.getTime());
+  endDateTime.setMinutes(endDateTime.getMinutes() + Number(duration));
+
+  // Get all events that could potentially conflict
+  const snapshot = await db.collection(config.COLLECTION_NAME).get();
 
   if (snapshot.empty) {
     return false;
   }
 
-  const events = snapshot.docs.map((doc) => {
+  // Check each event for overlap
+  for (const doc of snapshot.docs) {
     const data = doc.data();
-    const eventStart = new Date(data.start);
+
+    // Get start date - handle both Firebase Timestamp and Date formats
+    const eventStart = data.start.toDate
+      ? data.start.toDate()
+      : new Date(data.start);
     const eventDuration = Number(data.duration);
     const eventEnd = new Date(eventStart.getTime() + eventDuration * 60000);
-    return {
-      start: eventStart,
-      end: eventEnd,
-    };
-  });
 
-  // Check overlap
-  const newStart = new Date(dateTime);
-  return events.some((event) => {
-    return newStart < event.end && endDateTime > event.start;
-  });
+    // Check for time overlap - the standard formula
+    if (startDateTime < eventEnd && endDateTime > eventStart) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 /**
